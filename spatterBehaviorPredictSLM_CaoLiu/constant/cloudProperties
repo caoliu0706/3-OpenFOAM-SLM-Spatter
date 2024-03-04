@@ -1,0 +1,185 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  9
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      cloudProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+type        collidingCloud;
+
+solution
+{
+    coupled         true;
+    transient       yes;
+    cellValueSourceCorrection off;
+
+    interpolationSchemes
+    {
+        rho.air         cell;
+        U.air           cellPoint;
+        mu.air          cell;
+        alpha.air       cell;
+    }
+
+    integrationSchemes
+    {
+        U               Euler;
+    }
+
+    sourceTerms
+    {
+        schemes
+        {
+            U           semiImplicit 1;
+        }
+    }
+}
+
+constantProperties
+{
+    parcelTypeId    1;
+
+    rhoMin          1e-15;
+    minParcelMass   1e-15;
+
+    rho0            7800;
+    youngsModulus   2.2e9;
+    poissonsRatio   0.3;
+
+    constantVolume  false;
+}
+
+subModels
+{
+    particleForces
+    {
+        ErgunWenYuDrag
+        {
+            alphac alpha.air;
+        }
+        gravity;
+    }
+
+    injectionModels
+    {
+        model1
+        {
+            type            manualInjection;
+            massTotal       0;
+            parcelBasisType fixed;
+            nParticle       1;
+            SOI             0;
+            positionsFile   "cloudPositions";
+            U0              (0 0 0);
+            sizeDistribution
+            {
+                type        normal;
+                normalDistribution
+                {
+                    expectation 40e-6;
+                    variance 5e-6;
+                    minValue 25e-6;
+                    maxValue 55e-6;
+                }
+            }
+        }
+    }
+
+    dispersionModel none;
+
+    patchInteractionModel localInteraction;
+
+    localInteractionCoeffs
+    {
+        patches
+        (
+            OUTLET
+            {
+                type escape;
+            }
+            BOTTOM
+            {
+                type rebound;
+                e    0.9;
+                mu   0.62;
+            }
+            WALL
+            {
+                type rebound;
+                e    0.9;
+                mu   0.62;
+            }
+            BOTTOM_cavity
+            {
+                type stick;
+            }
+            INLET
+            {
+                type rebound;
+                e    0.9;
+                mu   0.62;
+            }
+        );
+    }
+
+    heatTransferModel none;
+
+    surfaceFilmModel none;
+
+    collisionModel pairCollision;
+
+    pairCollisionCoeffs
+    {
+        maxInteractionDistance  55e-6;
+
+        writeReferredParticleCloud no;
+
+        pairModel pairSpringSliderDashpot;
+
+        pairSpringSliderDashpotCoeffs
+        {
+            useEquivalentSize   no;
+            alpha               0.02;
+            b                   1.5;
+            mu                  0.62;
+            cohesionEnergyDensity 0;
+            collisionResolutionSteps 12;
+        };
+
+        wallModel wallSpringSliderDashpot;
+
+        wallSpringSliderDashpotCoeffs
+        {
+            useEquivalentSize no;
+            collisionResolutionSteps 12;
+            youngsModulus   2.2e9;
+            poissonsRatio   0.3;
+            alpha           0.8;
+            b               1.5;
+            mu              0.62;
+            cohesionEnergyDensity 0;
+        };
+
+        U     U.air;
+    }
+
+    stochasticCollisionModel none;
+
+    radiation off;
+}
+
+
+cloudFunctions
+{}
+
+
+// ************************************************************************* //
